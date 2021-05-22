@@ -78,6 +78,64 @@ def bottleneck2d(x, filters, downsample=None):
     return x
 
 
+def hourglass(x, depth=4):
+    '''Define hourglass accordin to depth depth
+    Args:
+        x (Tensor): input of hourgalss
+        depth (int): depth of hourglass
+    
+    Returns:
+        Tensor output
+    '''
+    # depth 0
+    d0_up1 = bottleneck2d(x, filters=128)
+    d0_low1 = layers.MaxPooling2D(pool_size=2, strides=2)(x)
+    d0_low1 = bottleneck2d(x=d0_low1, filters=128)
+
+    # depth 1
+    d1_up1 = bottleneck2d(x=d0_low1, filters=128)
+    d1_low1 = layers.MaxPooling2D(pool_size=2, strides=2)(d0_low1)
+    d1_low1 = bottleneck2d(x=d1_low1, filters=128)
+
+    # depth 2
+    d2_up1 = bottleneck2d(x=d1_low2, filters=128)
+    d2_low1 = layers.MaxPooling2D(pool_size=2, strides=2)(d1_low1)
+    d2_low1 = bottleneck2d(x=d2_low1, filters=128)
+
+    # depth 3
+    d3_up1 = bottleneck2d(x=d2_low1, filters=128)
+    d3_low1 = layers.MaxPooling2D(pool_size=2, strides=2)(d2_low1)
+    d3_low1 = bottleneck2d(x=d3_low1, filters=128)
+
+    # calculate d3 low2, low3, up2 and output
+    d3_low2 = bottleneck2d(x=d3_low1, filters=128)
+    d3_low3 = bottleneck2d(x=d3_low2, filters=128)
+    d3_up2 = layers.UpSampling2D(size=2)(d3_low3)
+    d3_out = layers.Add()([d3_up1 + d3_up2])
+
+    # calculate d2 low2, low3, up2 and output
+    d2_low2 = d3_out
+    d2_low3 = bottleneck2d(x=d2_low2, filters=128)
+    d2_up2 = layers.UpSampling2D(size=2)(d2_low3)
+    d2_out = layers.Add()([d2_up1, d2_up2])
+
+    # calculate d1 low2, low3, up2, output
+    d1_low2 = d2_out
+    d1_low3 = bottleneck2d(x=d1_low2, filters=128)
+    d1_up2 = layers.UpSampling2D(size=2)(d1_low3)
+    d1_out = layers.Add()([d1_up1, d1_up2])
+
+    # calculate d0 low2, low3, up2, output
+    d0_low2 = d1_out
+    d0_low3 = bottleneck2d(x=d0_low2, filters=128)
+    d0_up2 = layers.UpSampling2D(size=2)(d0_low3)
+    d0_out = layers.Add()([d0_up1, d0_up2])
+
+    return d0_out
+
+
+
+
 class HourglassNet(tf.keras.Model):
     """Hourglass model from Newell et al ECCV 2016"""
 
@@ -143,5 +201,25 @@ def hourglass_net():
 
     # block 3
     x = bottleneck2d(x, filters=128)
+
+    def make_fc(x_in):
+        x_out = layers.Conv2D(256, kernel_size=1)(x_in)
+        x_out = layers.BatchNormalization()(x_out)
+        x_out = layers.Activation('relu')(x_out)
+
+        return x_out
+
+
+    # hourglass net 0
+    hg0 = hourglass(x)
+    res0 = bottleneck2d(x=hg0, filters=128)
+    fc0 = make_fc(res0)
+    score0 = ''
+    
+    # hourglass net 1
+    hg1 = hourglass(hg0)
+    res1 = bottleneck2d(x=hg1, filters=128)
+    fc1 = make_fc(res1)
+    score1 = ''
 
     return  Model(inputs=input_, outputs=x)
