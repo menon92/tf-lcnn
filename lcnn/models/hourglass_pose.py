@@ -134,8 +134,6 @@ def hourglass(x, depth=4):
     return d0_out
 
 
-
-
 class HourglassNet(tf.keras.Model):
     """Hourglass model from Newell et al ECCV 2016"""
 
