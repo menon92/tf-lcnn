@@ -202,18 +202,18 @@ def hourglass_net():
     # block 3
     x = bottleneck2d(x, filters=128)
 
-    def make_fc(x_in):
+    def make_fc(x_in, name=None):
         x_out = layers.Conv2D(256, kernel_size=1)(x_in)
         x_out = layers.BatchNormalization()(x_out)
-        x_out = layers.Activation('relu')(x_out)
+        x_out = layers.Activation('relu', name=name)(x_out)
 
         return x_out
 
     # hourglass net 0
     hg0 = hourglass(x)
     res0 = bottleneck2d(x=hg0, filters=128)
-    fc0 = make_fc(res0)
-    score0 = multitask_head(x=fc0)
+    fc0 = make_fc(res0, 'fc0')
+    score0 = multitask_head(x=fc0, name='score0')
 
     fc0_ = layers.Conv2D(256, kernel_size=1)(fc0)
     score0_ = layers.Conv2D(256, kernel_size=1)(score0)
@@ -222,7 +222,7 @@ def hourglass_net():
     # hourglass net 1
     hg1 = hourglass(x_input_hg1)
     res1 = bottleneck2d(x=hg1, filters=128)
-    fc1 = make_fc(res1)
-    score1 = multitask_head(x=fc1)
+    fc1 = make_fc(res1, 'fc1')
+    score1 = multitask_head(x=fc1, name='score1')
 
-    return  Model(inputs=input_, outputs=[score1, score0])
+    return  Model(inputs=input_, outputs=[score1, score0, fc1])

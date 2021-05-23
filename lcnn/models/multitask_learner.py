@@ -3,12 +3,13 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
 
-def multitask_head(x, num_class=5):
+def multitask_head(x, num_class=5, name=None):
 	'''Multitaks head implimentaiton
 	Args:
 		x (Tensor): input to multitaks head
 		num_class (int): number of class or task
 	'''
+
 	head_size = [2, 1, 2]
 	print(f"multitask_head input shape::{K.int_shape(x)}")
 	m_out = K.int_shape(x)[-1] // 4
@@ -30,7 +31,7 @@ def multitask_head(x, num_class=5):
 	x3 = layers.Conv2D(head_size[2], kernel_size=1, padding='SAME')(x3)
 
 	# combine three head
-	out = layers.Concatenate(axis=-1)([x2, x1, x3])
+	out = layers.Concatenate(axis=-1, name=name)([x2, x1, x3])
 
 	return out
 
