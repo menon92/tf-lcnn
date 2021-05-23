@@ -2,6 +2,8 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras import layers
 
+from . multitask_learner import multitask_head
+
 
 class Bottleneck2D(tf.keras.Model):
     expansion = 2
@@ -98,7 +100,7 @@ def hourglass(x, depth=4):
     d1_low1 = bottleneck2d(x=d1_low1, filters=128)
 
     # depth 2
-    d2_up1 = bottleneck2d(x=d1_low2, filters=128)
+    d2_up1 = bottleneck2d(x=d1_low1, filters=128)
     d2_low1 = layers.MaxPooling2D(pool_size=2, strides=2)(d1_low1)
     d2_low1 = bottleneck2d(x=d2_low1, filters=128)
 
@@ -111,7 +113,7 @@ def hourglass(x, depth=4):
     d3_low2 = bottleneck2d(x=d3_low1, filters=128)
     d3_low3 = bottleneck2d(x=d3_low2, filters=128)
     d3_up2 = layers.UpSampling2D(size=2)(d3_low3)
-    d3_out = layers.Add()([d3_up1 + d3_up2])
+    d3_out = layers.Add()([d3_up1, d3_up2])
 
     # calculate d2 low2, low3, up2 and output
     d2_low2 = d3_out
@@ -207,17 +209,20 @@ def hourglass_net():
 
         return x_out
 
-
     # hourglass net 0
     hg0 = hourglass(x)
     res0 = bottleneck2d(x=hg0, filters=128)
     fc0 = make_fc(res0)
-    score0 = ''
-    
+    score0 = multitask_head(x=fc0)
+
+    fc0_ = layers.Conv2D(256, kernel_size=1)(fc0)
+    score0_ = layers.Conv2D(256, kernel_size=1)(score0)
+    x_input_hg1 = layers.Add()([x, fc0_, score0_])
+
     # hourglass net 1
-    hg1 = hourglass(hg0)
+    hg1 = hourglass(x_input_hg1)
     res1 = bottleneck2d(x=hg1, filters=128)
     fc1 = make_fc(res1)
-    score1 = ''
+    score1 = multitask_head(x=fc1)
 
-    return  Model(inputs=input_, outputs=x)
+    return  Model(inputs=input_, outputs=[score1, score0])

@@ -27,4 +27,8 @@ from lcnn.models.hourglass_pose import hourglass_net
 
 model = hourglass_net()
 model.summary()
-plot_model(model, 'figs/HourglassNet-Static-Graph-add-hourglass.png')
+plot_model(
+	model,
+	'figs/HourglassNet-Static-Graph-add-hourglass-multitask.png',
+	show_shapes=True
+)
