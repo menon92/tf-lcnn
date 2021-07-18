@@ -1,1 +1,3 @@
-from . import models
+import lcnn.models
+import lcnn.datasets
+import lcnn.config

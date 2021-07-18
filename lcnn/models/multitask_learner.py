@@ -1,3 +1,5 @@
+import numpy as np
+
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
@@ -35,3 +37,7 @@ def multitask_head(x, num_class=5, name=None):
 
 	return out
 
+
+def multitask_learner(backbone):
+	num_class = 5
+	head_size = np.array([2, 1, 2])
