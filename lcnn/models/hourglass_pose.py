@@ -176,10 +176,10 @@ class HourglassNet(tf.keras.Model):
         return Model(inputs=[x], outputs=self.call(x))
 
 
-def hourglass_net():
-    input_ = layers.Input(shape=(128, 128, 3))
+def hourglass_net(image):
+    # input_ = layers.Input(shape=(128, 128, 3))
 
-    x = layers.Conv2D(64, kernel_size=7, padding='SAME', strides=2)(input_)
+    x = layers.Conv2D(64, kernel_size=7, padding='SAME', strides=2)(image)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
@@ -213,7 +213,7 @@ def hourglass_net():
     hg0 = hourglass(x)
     res0 = bottleneck2d(x=hg0, filters=128)
     fc0 = make_fc(res0, 'fc0')
-    score0 = multitask_head(x=fc0, name='score0')
+    score0 = multitask_head(x=fc0, name='score0') # output score0
 
     fc0_ = layers.Conv2D(256, kernel_size=1)(fc0)
     score0_ = layers.Conv2D(256, kernel_size=1)(score0)
@@ -222,7 +222,9 @@ def hourglass_net():
     # hourglass net 1
     hg1 = hourglass(x_input_hg1)
     res1 = bottleneck2d(x=hg1, filters=128)
-    fc1 = make_fc(res1, 'fc1')
-    score1 = multitask_head(x=fc1, name='score1')
+    fc1 = make_fc(res1, 'fc1') # features
+    score1 = multitask_head(x=fc1, name='score1')  # output score1
 
-    return  Model(inputs=input_, outputs=[score1, score0, fc1])
+    return [score0, score1], fc1
+
+    # return  Model(inputs=input_, outputs=[score1, score0, fc1])
