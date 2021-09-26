@@ -148,3 +148,10 @@ def sigmoid_l1_loss(logits, target, offset=0.0, mask=None):
         axis=1
     )
     return loss
+
+
+def binary_cross_entropy_with_logits(logit, target):
+    loss = tf.keras.losses.binary_crossentropy(
+        y_true=target, y_pred=logit, from_logits=True
+    )
+    return loss
