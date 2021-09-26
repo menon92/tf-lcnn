@@ -124,18 +124,27 @@ def l2loss(input, target):
 
 def cross_entropy_loss(logits, positive):
     nlogp = tf.nn.log_softmax(logits, dim=0)
-    return (positive * nlogp[1] + (1 - positive) * nlogp[0]).mean(2).mean(1)
-
+    # return (positive * nlogp[1] + (1 - positive) * nlogp[0]).mean(2).mean(1)
+    loss = tf.math.reduce_mean(
+        tf.math.reduce_mean((positive * nlogp[1] + (1 - positive) * nlogp[0]), axis=2),
+        axis=1
+    ) 
 
 def sigmoid_l1_loss(logits, target, offset=0.0, mask=None):
     logp = tf.math.sigmoid(logits) + offset
     loss = tf.math.abs(logp - target)
     if mask is not None:
-        w = mask.mean(2, True).mean(1, True)
+        # w = mask.mean(2, True).mean(1, True)
+        w = tf.math.reduce_mean(mask, axis=2, keepdims=True)
         # w[w == 0] = 1
         condition = tf.equal(w, 0)
         w = tf.where(condition, 1.0, w)
-        
+
         loss = loss * (mask / w)
 
-    return loss.mean(2).mean(1)
+    # return loss.mean(2).mean(1)
+    loss = tf.math.reduce_mean(
+        tf.math.reduce_mean(loss, axis=2),
+        axis=1
+    )
+    return loss
