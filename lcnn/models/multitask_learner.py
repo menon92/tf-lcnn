@@ -67,7 +67,7 @@ def multitask_learner(input_dict):
 
     image = input_dict['image']
     outputs, feature = hourglass_net(image)
-    results = {"feature": feature}
+    result = {"feature": feature}
     batch, channel, row, col = outputs[0].shape
 
     T = input_dict["target"].copy()
@@ -79,11 +79,11 @@ def multitask_learner(input_dict):
     for task in ["joff"]:
         T[task] = T[task].permute(1, 2, 0, 3, 4)
 
-    offset = self.head_off
+    offset = [2, 3, 5]
     loss_weight = M.loss_weight
     losses = []
     for stack, output in enumerate(outputs):
-        output = output.transpose(0, 1).reshape([-1, batch, row, col]).contiguous()
+        output = output.transpose(0, 1).reshape([-1, batch, row, col]) # .contiguous()
         jmap = output[0 : offset[0]].reshape(n_jtyp, 2, batch, row, col)
         lmap = output[offset[0] : offset[1]].squeeze(0)
         joff = output[offset[1] : offset[2]].reshape(n_jtyp, 2, batch, row, col)
@@ -118,3 +118,24 @@ def multitask_learner(input_dict):
     return result
 
 
+def l2loss(input, target):
+    return ((target - input) ** 2).mean(2).mean(1)
+
+
+def cross_entropy_loss(logits, positive):
+    nlogp = tf.nn.log_softmax(logits, dim=0)
+    return (positive * nlogp[1] + (1 - positive) * nlogp[0]).mean(2).mean(1)
+
+
+def sigmoid_l1_loss(logits, target, offset=0.0, mask=None):
+    logp = tf.math.sigmoid(logits) + offset
+    loss = tf.math.abs(logp - target)
+    if mask is not None:
+        w = mask.mean(2, True).mean(1, True)
+        # w[w == 0] = 1
+        condition = tf.equal(w, 0)
+        w = tf.where(condition, 1.0, w)
+        
+        loss = loss * (mask / w)
+
+    return loss.mean(2).mean(1)
