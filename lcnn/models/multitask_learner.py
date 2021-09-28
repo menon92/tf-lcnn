@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -38,27 +39,6 @@ def multitask_head(x, num_class=5, name=None):
     out = layers.Concatenate(axis=-1, name=name)([x2, x1, x3])
 
     return out
-
-
-def l2loss(input, target):
-    return ((target - input) ** 2).mean(2).mean(1)
-
-
-def cross_entropy_loss(logits, positive):
-    nlogp = -F.log_softmax(logits, dim=0)
-    return (positive * nlogp[1] + (1 - positive) * nlogp[0]).mean(2).mean(1)
-
-
-def sigmoid_l1_loss(logits, target, offset=0.0, mask=None):
-    logp = torch.sigmoid(logits) + offset
-    loss = torch.abs(logp - target)
-    if mask is not None:
-        w = mask.mean(2, True).mean(1, True)
-        w[w == 0] = 1
-        loss = loss * (mask / w)
-
-    return loss.mean(2).mean(1)
-
 
 
 def multitask_learner(input_dict):
@@ -124,25 +104,24 @@ def l2loss(input, target):
 
 def cross_entropy_loss(logits, positive):
     nlogp = tf.nn.log_softmax(logits, dim=0)
-    # return (positive * nlogp[1] + (1 - positive) * nlogp[0]).mean(2).mean(1)
     loss = tf.math.reduce_mean(
         tf.math.reduce_mean((positive * nlogp[1] + (1 - positive) * nlogp[0]), axis=2),
         axis=1
     ) 
+    loss = tf.reduce_sum(loss)
+
+    return loss
+
 
 def sigmoid_l1_loss(logits, target, offset=0.0, mask=None):
     logp = tf.math.sigmoid(logits) + offset
     loss = tf.math.abs(logp - target)
     if mask is not None:
-        # w = mask.mean(2, True).mean(1, True)
         w = tf.math.reduce_mean(mask, axis=2, keepdims=True)
-        # w[w == 0] = 1
         condition = tf.equal(w, 0)
         w = tf.where(condition, 1.0, w)
-
         loss = loss * (mask / w)
 
-    # return loss.mean(2).mean(1)
     loss = tf.math.reduce_mean(
         tf.math.reduce_mean(loss, axis=2),
         axis=1
@@ -154,4 +133,5 @@ def binary_cross_entropy_with_logits(logit, target):
     loss = tf.keras.losses.binary_crossentropy(
         y_true=target, y_pred=logit, from_logits=True
     )
+    loss = tf.reduce_mean(loss, axis=1)
     return loss
